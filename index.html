@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent: #238636;
+            --accent-hover: #2ea043;
+            --border: #30363d;
+            --success: #238636;
+            --error: #f85149;
+            --warning: #d29922;
+            --running: #58a6ff;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #eaeef2;
+            --text-primary: #1f2328;
+            --text-secondary: #656d76;
+            --accent: #1a7f37;
+            --accent-hover: #2da44e;
+            --border: #d0d7de;
+            --success: #1a7f37;
+            --error: #cf222e;
+            --warning: #9a6700;
+            --running: #0969da;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-secondary);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+        }
+
+        .refresh-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .repo-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .repo-tab {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .repo-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .repo-tab:hover:not(.active) {
+            background: var(--bg-secondary);
+        }
+
+        .section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        .workflow-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .workflow-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .workflow-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .workflow-name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .workflow-status {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: rgba(35, 134, 54, 0.2);
+            color: var(--success);
+        }
+
+        .status-failure {
+            background: rgba(248, 81, 73, 0.2);
+            color: var(--error);
+        }
+
+        .status-running {
+            background: rgba(88, 166, 255, 0.2);
+            color: var(--running);
+        }
+
+        .status-pending {
+            background: rgba(210, 153, 34, 0.2);
+            color: var(--warning);
+        }
+
+        .workflow-details {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .workflow-details div {
+            margin-bottom: 4px;
+        }
+
+        .activity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .activity-stat {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .activity-stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .activity-stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .activity-table th,
+        .activity-table td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .activity-table th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .activity-type {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: var(--bg-tertiary);
+        }
+
+        .activity-link {
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .activity-link:hover {
+            text-decoration: underline;
+        }
+
+        .activity-time {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .error {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+            gap: 20px;
+        }
+
+        .login-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login-box h2 {
+            margin-bottom: 10px;
+        }
+
+        .login-box p {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .credentials-note {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 15px;
+            padding: 10px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .no-workflows {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .activity-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .workflow-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <h2>GitHub Dashboard</h2>
+            <p>Monitor workflows and activity for your repositories</p>
+            <form id="credentials-form">
+                <div class="form-group">
+                    <label for="client-id">GitHub OAuth Client ID</label>
+                    <input type="text" id="client-id" placeholder="Iv1.xxxxxxxxxxxxxxxx" required>
+                </div>
+                <div class="form-group">
+                    <label for="client-secret">GitHub OAuth Client Secret</label>
+                    <input type="password" id="client-secret" placeholder="Enter client secret" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Save & Continue</button>
+            </form>
+            <div class="credentials-note">
+                Credentials are stored locally in your browser (localStorage) and never sent to any server except GitHub's OAuth.
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard" class="hidden">
+        <div class="container">
+            <header>
+                <div class="header-left">
+                    <h1>GitHub Dashboard</h1>
+                    <div class="user-info">
+                        <img id="user-avatar" class="user-avatar" src="" alt="Avatar">
+                        <span id="username"></span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <span id="refresh-info" class="refresh-info"></span>
+                    <button id="refresh-btn" class="btn-secondary">Refresh</button>
+                    <button id="theme-toggle" class="theme-toggle">Light Mode</button>
+                    <button id="logout-btn" class="btn-secondary">Logout</button>
+                </div>
+            </header>
+
+            <div class="repo-tabs">
+                <button class="repo-tab active" data-repo="indusglobal">indusglobal</button>
+                <button class="repo-tab" data-repo="igir_code">igir_code</button>
+            </div>
+
+            <div id="error-container"></div>
+
+            <section class="section">
+                <h2 class="section-title">Workflow Status</h2>
+                <div id="workflows-container">
+                    <div class="loading">Loading workflows...</div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">Activity Summary</h2>
+                <div class="activity-grid" id="activity-stats">
+                    <div class="loading">Loading activity...</div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">Recent Activity</h2>
+                <div id="recent-activity">
+                    <div class="loading">Loading recent activity...</div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const GITHUB_API = 'https://api.github.com';
+        const STORAGE_KEYS = {
+            CLIENT_ID: 'gh_dash_client_id',
+            CLIENT_SECRET: 'gh_dash_client_secret',
+            TOKEN: 'gh_dash_token'
+        };
+
+        let currentRepo = 'indusglobal';
+        let accessToken = null;
+        let refreshInterval = null;
+        let lastRefresh = null;
+
+        function getStoredCredentials() {
+            return {
+                clientId: localStorage.getItem(STORAGE_KEYS.CLIENT_ID),
+                clientSecret: localStorage.getItem(STORAGE_KEYS.CLIENT_SECRET)
+            };
+        }
+
+        function saveCredentials(clientId, clientSecret) {
+            localStorage.setItem(STORAGE_KEYS.CLIENT_ID, clientId);
+            localStorage.setItem(STORAGE_KEYS.CLIENT_SECRET, clientSecret);
+        }
+
+        function clearCredentials() {
+            localStorage.removeItem(STORAGE_KEYS.CLIENT_ID);
+            localStorage.removeItem(STORAGE_KEYS.CLIENT_SECRET);
+            localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        }
+
+        function showLogin() {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+        }
+
+        function showDashboard() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            initDashboard();
+        }
+
+        async function handleLogin(clientId, clientSecret) {
+            const code = await getOAuthCode(clientId);
+            if (!code) return false;
+
+            accessToken = await exchangeCodeForToken(clientId, clientSecret, code);
+            if (!accessToken) return false;
+
+            localStorage.setItem(STORAGE_KEYS.TOKEN, accessToken);
+            return true;
+        }
+
+        async function getOAuthCode(clientId) {
+            const redirectUri = window.location.origin + window.location.pathname;
+            const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,workflow,read:org`;
+            
+            return new Promise((resolve) => {
+                const width = 600, height = 700;
+                const left = (window.innerWidth - width) / 2;
+                const top = (window.innerHeight - height) / 2;
+                const authWindow = window.open(authUrl, 'GitHub OAuth', `width=${width},height=${height},left=${left},top=${top}`);
+
+                const interval = setInterval(() => {
+                    try {
+                        if (authWindow.location.href.includes('code=')) {
+                            const url = new URL(authWindow.location.href);
+                            const code = url.searchParams.get('code');
+                            clearInterval(interval);
+                            authWindow.close();
+                            resolve(code);
+                        }
+                    } catch (e) {}
+                }, 500);
+
+                authWindow.addEventListener('beforeunload', () => {
+                    clearInterval(interval);
+                    resolve(null);
+                });
+
+                setTimeout(() => {
+                    clearInterval(interval);
+                    if (!authWindow.closed) authWindow.close();
+                    resolve(null);
+                }, 300000);
+            });
+        }
+
+        async function exchangeCodeForToken(clientId, clientSecret, code) {
+            try {
+                const response = await fetch('https://github.com/login/oauth/access_token', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code })
+                });
+                const data = await response.json();
+                return data.access_token;
+            } catch (e) {
+                console.error('Token exchange failed:', e);
+                return null;
+            }
+        }
+
+        async function apiRequest(endpoint) {
+            if (!accessToken) accessToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
+            
+            const response = await fetch(`${GITHUB_API}${endpoint}`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (response.status === 401) {
+                showLogin();
+                return null;
+            }
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            return response.json();
+        }
+
+        async function getUser() {
+            const user = await apiRequest('/user');
+            if (user) {
+                document.getElementById('user-avatar').src = user.avatar_url;
+                document.getElementById('username').textContent = user.login;
+            }
+        }
+
+        async function getWorkflows(repo) {
+            const container = document.getElementById('workflows-container');
+            container.innerHTML = '<div class="loading">Loading workflows...</div>';
+
+            try {
+                const data = await apiRequest(`/repos/amitkak/${repo}/actions/workflows`);
+                
+                if (!data.workflows || data.workflows.length === 0) {
+                    container.innerHTML = '<div class="no-workflows">No workflows found in this repository.</div>';
+                    return;
+                }
+
+                container.innerHTML = '<div class="workflow-grid"></div>';
+                const grid = container.querySelector('.workflow-grid');
+
+                for (const workflow of data.workflows) {
+                    const runs = await apiRequest(`/repos/amitkak/${repo}/actions/workflows/${workflow.id}/runs?per_page=5`);
+                    const lastRun = runs.workflow_runs && runs.workflow_runs.length > 0 ? runs.workflow_runs[0] : null;
+                    
+                    const card = createWorkflowCard(workflow, lastRun, repo);
+                    grid.appendChild(card);
+                }
+            } catch (e) {
+                container.innerHTML = `<div class="error">Failed to load workflows: ${e.message}</div>`;
+            }
+        }
+
+        function createWorkflowCard(workflow, lastRun, repo) {
+            const card = document.createElement('div');
+            card.className = 'workflow-card';
+
+            const statusClass = lastRun ? getStatusClass(lastRun.conclusion || lastRun.status) : 'status-pending';
+            const statusText = lastRun ? getStatusText(lastRun.conclusion || lastRun.status) : 'No runs';
+            
+            let lastRunTime = 'Never';
+            if (lastRun) {
+                lastRunTime = formatTimeAgo(lastRun.created_at);
+            }
+
+            let nextRun = 'Not scheduled';
+            if (workflow.schedule) {
+                nextRun = `Cron: ${workflow.schedule}`;
+            } else if (workflow.path) {
+                nextRun = 'On trigger';
+            }
+
+            card.innerHTML = `
+                <div class="workflow-header">
+                    <span class="workflow-name">${workflow.name}</span>
+                    <span class="workflow-status ${statusClass}">${statusText}</span>
+                </div>
+                <div class="workflow-details">
+                    <div>Last run: ${lastRunTime}</div>
+                    <div>Next: ${nextRun}</div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'success': return 'status-success';
+                case 'completed': return 'status-success';
+                case 'failure': return 'status-failure';
+                case 'action_required': return 'status-failure';
+                case 'in_progress': return 'status-running';
+                case 'queued': return 'status-running';
+                case 'pending': return 'status-pending';
+                default: return 'status-pending';
+            }
+        }
+
+        function getStatusText(status) {
+            switch (status) {
+                case 'success': return 'Passed';
+                case 'completed': return 'Passed';
+                case 'failure': return 'Failed';
+                case 'action_required': return 'Action Required';
+                case 'in_progress': return 'Running';
+                case 'queued': return 'Queued';
+                case 'pending': return 'Pending';
+                case 'cancelled': return 'Cancelled';
+                case 'timed_out': return 'Timed Out';
+                default: return status || 'Unknown';
+            }
+        }
+
+        async function getActivityStats(repo) {
+            const container = document.getElementById('activity-stats');
+            container.innerHTML = '<div class="loading">Loading activity...</div>';
+
+            try {
+                const now = new Date();
+                const threeDaysAgo = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString();
+                const oneWeekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+                const oneMonthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+                const [commits3d, commits1w, commits1m, prs, issues] = await Promise.all([
+                    apiRequest(`/repos/amitkak/${repo}/commits?since=${threeDaysAgo}&per_page=100`),
+                    apiRequest(`/repos/amitkak/${repo}/commits?since=${oneWeekAgo}&per_page=100`),
+                    apiRequest(`/repos/amitkak/${repo}/commits?since=${oneMonthAgo}&per_page=100`),
+                    apiRequest(`/repos/amitkak/${repo}/pulls?state=all&sort=updated&per_page=100`),
+                    apiRequest(`/repos/amitkak/${repo}/issues?state=all&since=${oneMonthAgo}&per_page=100`)
+                ]);
+
+                const prs3d = prs.filter(pr => new Date(pr.created_at) >= new Date(threeDaysAgo));
+                const prs1w = prs.filter(pr => new Date(pr.created_at) >= new Date(oneWeekAgo));
+                const prsMerged1m = prs.filter(pr => pr.merged_at && new Date(pr.merged_at) >= new Date(oneMonthAgo));
+
+                const issues3d = issues.filter(issue => !issue.pull_request && new Date(issue.created_at) >= new Date(threeDaysAgo));
+                const issues1w = issues.filter(issue => !issue.pull_request && new Date(issue.created_at) >= new Date(oneWeekAgo));
+                const issues1m = issues.filter(issue => !issue.pull_request && new Date(issue.created_at) >= new Date(oneMonthAgo));
+
+                container.innerHTML = `
+                    <div class="activity-stat">
+                        <div class="activity-stat-value">${commits3d.length}</div>
+                        <div class="activity-stat-label">Commits (3d)</div>
+                    </div>
+                    <div class="activity-stat">
+                        <div class="activity-stat-value">${commits1w.length}</div>
+                        <div class="activity-stat-label">Commits (1w)</div>
+                    </div>
+                    <div class="activity-stat">
+                        <div class="activity-stat-value">${commits1m.length}</div>
+                        <div class="activity-stat-label">Commits (1m)</div>
+                    </div>
+                    <div class="activity-stat">
+                        <div class="activity-stat-value">${prs3d.length}</div>
+                        <div class="activity-stat-label">PRs (3d)</div>
+                    </div>
+                    <div class="activity-stat">
+                        <div class="activity-stat-value">${prs1w.length}</div>
+                        <div class="activity-stat-label">PRs (1w)</div>
+                    </div>
+                    <div class="activity-stat">
+                        <div class="activity-stat-value">${prsMerged1m.length}</div>
+                        <div class="activity-stat-label">PRs Merged (1m)</div>
+                    </div>
+                    <div class="activity-stat">
+                        <div class="activity-stat-value">${issues3d.length}</div>
+                        <div class="activity-stat-label">Issues (3d)</div>
+                    </div>
+                    <div class="activity-stat">
+                        <div class="activity-stat-value">${issues1w.length}</div>
+                        <div class="activity-stat-label">Issues (1w)</div>
+                    </div>
+                    <div class="activity-stat">
+                        <div class="activity-stat-value">${issues1m.length}</div>
+                        <div class="activity-stat-label">Issues (1m)</div>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = `<div class="error">Failed to load activity: ${e.message}</div>`;
+            }
+        }
+
+        async function getRecentActivity(repo) {
+            const container = document.getElementById('recent-activity');
+            container.innerHTML = '<div class="loading">Loading recent activity...</div>';
+
+            try {
+                const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+                
+                const [commits, prs, issues] = await Promise.all([
+                    apiRequest(`/repos/amitkak/${repo}/commits?since=${oneMonthAgo}&per_page=50`),
+                    apiRequest(`/repos/amitkak/${repo}/pulls?state=all&sort=updated&per_page=50`),
+                    apiRequest(`/repos/amitkak/${repo}/issues?state=all&since=${oneMonthAgo}&per_page=50`)
+                ]);
+
+                const activities = [];
+
+                commits.slice(0, 10).forEach(commit => {
+                    activities.push({
+                        type: 'commit',
+                        title: commit.commit.message.split('\n')[0].substring(0, 70),
+                        url: commit.html_url,
+                        time: commit.commit.author.date,
+                        actor: commit.author?.login || commit.commit.author.name
+                    });
+                });
+
+                prs.slice(0, 10).forEach(pr => {
+                    activities.push({
+                        type: 'pr',
+                        title: pr.title.substring(0, 70),
+                        url: pr.html_url,
+                        time: pr.updated_at,
+                        actor: pr.user?.login,
+                        state: pr.state,
+                        merged: pr.merged
+                    });
+                });
+
+                issues.filter(i => !i.pull_request).slice(0, 10).forEach(issue => {
+                    activities.push({
+                        type: 'issue',
+                        title: issue.title.substring(0, 70),
+                        url: issue.html_url,
+                        time: issue.updated_at,
+                        actor: issue.user?.login,
+                        state: issue.state
+                    });
+                });
+
+                activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+                const recent = activities.slice(0, 10);
+
+                if (recent.length === 0) {
+                    container.innerHTML = '<div class="no-workflows">No recent activity found.</div>';
+                    return;
+                }
+
+                let html = `
+                    <table class="activity-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Title</th>
+                                <th>Actor</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                recent.forEach(item => {
+                    const typeIcon = getTypeIcon(item.type);
+                    const typeClass = item.type === 'pr' ? (item.merged ? 'status-success' : (item.state === 'open' ? 'status-running' : 'status-failure')) : 
+                                     item.type === 'issue' ? (item.state === 'open' ? 'status-running' : 'status-success') : '';
+                    
+                    html += `
+                        <tr>
+                            <td><span class="activity-type ${typeClass}">${typeIcon} ${item.type.toUpperCase()}</span></td>
+                            <td><a href="${item.url}" target="_blank" class="activity-link">${item.title}</a></td>
+                            <td>${item.actor || 'Unknown'}</td>
+                            <td class="activity-time">${formatTimeAgo(item.time)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = `<div class="error">Failed to load recent activity: ${e.message}</div>`;
+            }
+        }
+
+        function getTypeIcon(type) {
+            switch (type) {
+                case 'commit': return '📝';
+                case 'pr': return '🔀';
+                case 'issue': return '🐛';
+                default: return '📌';
+            }
+        }
+
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+            if (seconds < 2592000) return `${Math.floor(seconds / 604800)}w ago`;
+            return `${Math.floor(seconds / 2592000)}mo ago`;
+        }
+
+        function updateRefreshInfo() {
+            if (lastRefresh) {
+                document.getElementById('refresh-info').textContent = `Last refresh: ${formatTimeAgo(lastRefresh)}`;
+            }
+        }
+
+        async function refreshData() {
+            lastRefresh = new Date();
+            updateRefreshInfo();
+            await Promise.all([
+                getWorkflows(currentRepo),
+                getActivityStats(currentRepo),
+                getRecentActivity(currentRepo)
+            ]);
+        }
+
+        function initDashboard() {
+            getUser();
+            refreshData();
+
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(refreshData, 2 * 60 * 60 * 1000);
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            
+            const btn = document.getElementById('theme-toggle');
+            btn.textContent = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
+            
+            localStorage.setItem('gh_dash_theme', newTheme);
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('gh_dash_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('theme-toggle').textContent = savedTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
+        }
+
+        document.getElementById('credentials-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const clientId = document.getElementById('client-id').value;
+            const clientSecret = document.getElementById('client-secret').value;
+            
+            saveCredentials(clientId, clientSecret);
+            
+            const success = await handleLogin(clientId, clientSecret);
+            if (success) {
+                showDashboard();
+            } else {
+                alert('Authentication failed. Please check your credentials and try again.');
+            }
+        });
+
+        document.querySelectorAll('.repo-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.repo-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentRepo = tab.dataset.repo;
+                refreshData();
+            });
+        });
+
+        document.getElementById('refresh-btn').addEventListener('click', refreshData);
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            clearCredentials();
+            accessToken = null;
+            showLogin();
+        });
+
+        loadTheme();
+
+        if (localStorage.getItem(STORAGE_KEYS.CLIENT_ID) && localStorage.getItem(STORAGE_KEYS.TOKEN)) {
+            accessToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
+            showDashboard();
+        } else if (localStorage.getItem(STORAGE_KEYS.CLIENT_ID)) {
+            showLogin();
+        } else {
+            showLogin();
+        }
+
+        if (window.location.search.includes('code=')) {
+            const url = new URL(window.location.href);
+            const code = url.searchParams.get('code');
+            if (code && localStorage.getItem(STORAGE_KEYS.CLIENT_ID)) {
+                const { clientId, clientSecret } = getStoredCredentials();
+                (async () => {
+                    const token = await exchangeCodeForToken(clientId, clientSecret, code);
+                    if (token) {
+                        localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+                        window.history.replaceState({}, '', window.location.pathname);
+                        showDashboard();
+                    }
+                })();
+            }
+        }
+    </script>
+</body>
+</html>
