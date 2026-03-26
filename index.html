@@ -428,6 +428,7 @@
         <div class="login-box">
             <h2>GitHub Dashboard</h2>
             <p>Monitor workflows and activity for your repositories</p>
+            <div id="login-error" class="error hidden"></div>
             <form id="credentials-form">
                 <div class="form-group">
                     <label for="client-id">GitHub OAuth Client ID</label>
@@ -437,11 +438,19 @@
                     <label for="client-secret">GitHub OAuth Client Secret</label>
                     <input type="password" id="client-secret" placeholder="Enter client secret" required>
                 </div>
-                <button type="submit" class="btn" style="width: 100%;">Save & Continue</button>
+                <button type="submit" class="btn" style="width: 100%;">Login with GitHub</button>
             </form>
             <div class="credentials-note">
                 Credentials are stored locally in your browser (localStorage) and never sent to any server except GitHub's OAuth.
             </div>
+        </div>
+    </div>
+
+    <div id="oauth-loading" class="login-container hidden">
+        <div class="login-box">
+            <h2>Authenticating...</h2>
+            <p>Please wait while we complete the GitHub OAuth flow.</p>
+            <div class="loading">Redirecting to GitHub...</div>
         </div>
     </div>
 
@@ -527,58 +536,38 @@
         function showLogin() {
             document.getElementById('login-screen').classList.remove('hidden');
             document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('oauth-loading').classList.add('hidden');
         }
 
         function showDashboard() {
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('oauth-loading').classList.add('hidden');
             initDashboard();
         }
 
-        async function handleLogin(clientId, clientSecret) {
-            const code = await getOAuthCode(clientId);
-            if (!code) return false;
-
-            accessToken = await exchangeCodeForToken(clientId, clientSecret, code);
-            if (!accessToken) return false;
-
-            localStorage.setItem(STORAGE_KEYS.TOKEN, accessToken);
-            return true;
+        function showOAuthLoading() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('oauth-loading').classList.remove('hidden');
         }
 
-        async function getOAuthCode(clientId) {
+        function redirectToGitHubOAuth(clientId) {
             const redirectUri = window.location.origin + window.location.pathname;
-            const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,workflow,read:org`;
+            const state = generateRandomString(16);
+            sessionStorage.setItem('oauth_state', state);
             
-            return new Promise((resolve) => {
-                const width = 600, height = 700;
-                const left = (window.innerWidth - width) / 2;
-                const top = (window.innerHeight - height) / 2;
-                const authWindow = window.open(authUrl, 'GitHub OAuth', `width=${width},height=${height},left=${left},top=${top}`);
+            const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,workflow,read:org&state=${state}`;
+            window.location.href = authUrl;
+        }
 
-                const interval = setInterval(() => {
-                    try {
-                        if (authWindow.location.href.includes('code=')) {
-                            const url = new URL(authWindow.location.href);
-                            const code = url.searchParams.get('code');
-                            clearInterval(interval);
-                            authWindow.close();
-                            resolve(code);
-                        }
-                    } catch (e) {}
-                }, 500);
-
-                authWindow.addEventListener('beforeunload', () => {
-                    clearInterval(interval);
-                    resolve(null);
-                });
-
-                setTimeout(() => {
-                    clearInterval(interval);
-                    if (!authWindow.closed) authWindow.close();
-                    resolve(null);
-                }, 300000);
-            });
+        function generateRandomString(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
         }
 
         async function exchangeCodeForToken(clientId, clientSecret, code) {
@@ -596,6 +585,56 @@
             } catch (e) {
                 console.error('Token exchange failed:', e);
                 return null;
+            }
+        }
+
+        async function handleOAuthCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+
+            if (error) {
+                showLogin();
+                const errorDiv = document.getElementById('login-error');
+                errorDiv.textContent = `OAuth Error: ${error}. Please try again.`;
+                errorDiv.classList.remove('hidden');
+                window.history.replaceState({}, '', window.location.pathname);
+                return;
+            }
+
+            if (code) {
+                const savedState = sessionStorage.getItem('oauth_state');
+                if (state && state !== savedState) {
+                    showLogin();
+                    const errorDiv = document.getElementById('login-error');
+                    errorDiv.textContent = 'OAuth state mismatch. Please try again.';
+                    errorDiv.classList.remove('hidden');
+                    window.history.replaceState({}, '', window.location.pathname);
+                    return;
+                }
+
+                showOAuthLoading();
+                
+                const { clientId, clientSecret } = getStoredCredentials();
+                if (!clientId || !clientSecret) {
+                    showLogin();
+                    return;
+                }
+
+                const token = await exchangeCodeForToken(clientId, clientSecret, code);
+                
+                if (token) {
+                    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+                    sessionStorage.removeItem('oauth_state');
+                    window.history.replaceState({}, '', window.location.pathname);
+                    showDashboard();
+                } else {
+                    showLogin();
+                    const errorDiv = document.getElementById('login-error');
+                    errorDiv.textContent = 'Failed to obtain access token. Please try again.';
+                    errorDiv.classList.remove('hidden');
+                }
             }
         }
 
@@ -941,19 +980,13 @@
             document.getElementById('theme-toggle').textContent = savedTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
         }
 
-        document.getElementById('credentials-form').addEventListener('submit', async (e) => {
+        document.getElementById('credentials-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const clientId = document.getElementById('client-id').value;
             const clientSecret = document.getElementById('client-secret').value;
             
             saveCredentials(clientId, clientSecret);
-            
-            const success = await handleLogin(clientId, clientSecret);
-            if (success) {
-                showDashboard();
-            } else {
-                alert('Authentication failed. Please check your credentials and try again.');
-            }
+            redirectToGitHubOAuth(clientId);
         });
 
         document.querySelectorAll('.repo-tab').forEach(tab => {
@@ -975,29 +1008,15 @@
 
         loadTheme();
 
-        if (localStorage.getItem(STORAGE_KEYS.CLIENT_ID) && localStorage.getItem(STORAGE_KEYS.TOKEN)) {
+        if (window.location.search.includes('code=') || window.location.search.includes('error=')) {
+            handleOAuthCallback();
+        } else if (localStorage.getItem(STORAGE_KEYS.CLIENT_ID) && localStorage.getItem(STORAGE_KEYS.TOKEN)) {
             accessToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
             showDashboard();
         } else if (localStorage.getItem(STORAGE_KEYS.CLIENT_ID)) {
             showLogin();
         } else {
             showLogin();
-        }
-
-        if (window.location.search.includes('code=')) {
-            const url = new URL(window.location.href);
-            const code = url.searchParams.get('code');
-            if (code && localStorage.getItem(STORAGE_KEYS.CLIENT_ID)) {
-                const { clientId, clientSecret } = getStoredCredentials();
-                (async () => {
-                    const token = await exchangeCodeForToken(clientId, clientSecret, code);
-                    if (token) {
-                        localStorage.setItem(STORAGE_KEYS.TOKEN, token);
-                        window.history.replaceState({}, '', window.location.pathname);
-                        showDashboard();
-                    }
-                })();
-            }
         }
     </script>
 </body>
